@@ -1,0 +1,64 @@
+---
+title: "FT scrape"
+output: html_document
+date: '2022-05-24'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(rvest)
+library(magrittr)
+library(dplyr)
+library(stringr)
+
+```
+
+```{r test_example}
+url_domain <- "https://www.firstthings.com"
+
+ft_page1 <- read_html(paste0(url_domain,"/author/david-b-hart/page_1"))
+
+page1_articles <- ft_page1 %>% 
+  html_elements(".user-article h2 a") %>% 
+  html_attr("href") %>% 
+  as_tibble() %>% 
+  rename(href = "value") 
+
+```
+
+```{r first_things}
+articles <- data.frame(value = character())
+
+for(pnum in 1:13) {
+  
+  cur_page <- read_html(paste0(url_domain,"/author/david-b-hart/page_", toString(pnum)))
+  
+  cur_articles <- cur_page %>% 
+    html_elements(".user-article h2 a") %>% 
+    html_attr("href") %>% 
+    as_tibble()
+     
+  
+  articles <- bind_rows(articles, cur_articles)
+  
+}
+
+articles <- articles %>% 
+  rename(link = "value") %>%
+  mutate(link = paste0(url_domain,link),
+         source = "first things")
+```
+
+```{r substack}
+substack <- read_html("https://davidbentleyhart.substack.com/archive")
+
+substack_articles <- substack %>% 
+  html_elements(".post-preview-title") %>% # Unlike with First Things substack doesn't include entire title in the url -- we'll need to change the selector to also grab that element
+  html_attr("href") %>% 
+  as_tibble() %>% 
+  rename(link = "value") %>% 
+  mutate(source = "substack")
+ 
+```
+
